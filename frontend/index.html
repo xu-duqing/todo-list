@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Todo-list</title>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f0f2f5;color:#333;min-height:100vh}
+#root{max-width:720px;margin:0 auto;padding:24px 16px}
+h1{font-size:28px;margin-bottom:24px;color:#1a1a2e;text-align:center}
+.card{background:#fff;border-radius:12px;padding:20px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.form-row{display:flex;gap:8px;flex-wrap:wrap}
+input,select,button{border-radius:8px;border:1px solid #d9d9d9;padding:10px 14px;font-size:14px;outline:none;transition:border-color .2s}
+input:focus,select:focus{border-color:#4f46e5}
+input[type=text]{flex:1;min-width:200px}
+select{min-width:100px}
+button{cursor:pointer;font-weight:500;border:none}
+.btn-primary{background:#4f46e5;color:#fff}
+.btn-primary:hover{background:#4338ca}
+.btn-danger{background:#ef4444;color:#fff}
+.btn-danger:hover{background:#dc2626}
+.btn-sm{padding:6px 12px;font-size:13px}
+.btn-ghost{background:transparent;border:1px solid #d9d9d9;color:#666}
+.btn-ghost:hover{background:#f5f5f5}
+.filter-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.todo-item{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid #f0f0f0;transition:background .15s}
+.todo-item:hover{background:#fafafa}
+.todo-item:last-child{border-bottom:none}
+.todo-check{width:22px;height:22px;cursor:pointer;accent-color:#4f46e5}
+.todo-content{flex:1;min-width:0}
+.todo-title{font-size:15px;font-weight:500}
+.todo-title.done{text-decoration:line-through;color:#999}
+.todo-meta{font-size:12px;color:#888;margin-top:2px;display:flex;gap:8px}
+.priority-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px}
+.priority-low{background:#22c55e}.priority-medium{background:#f59e0b}.priority-high{background:#ef4444}
+.pagination{display:flex;justify-content:center;gap:8px;margin-top:16px}
+.empty{text-align:center;padding:40px;color:#999}
+.loading{text-align:center;padding:40px}
+.error{background:#fef2f2;color:#dc2626;padding:12px;border-radius:8px;margin-bottom:16px}
+.badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:500}
+.badge-pending{background:#fef3c7;color:#92400e}
+.badge-completed{background:#dcfce7;color:#166534}
+.todo-actions{display:flex;gap:6px}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useCallback } = React;
+const API = "/api/v1/todos";
+
+function useTodos() {
+  const [state, setState] = useState({items:[],loading:true,error:null,pagination:{page:1,page_size:20,total:0}});
+  const [filter,setFilter]=useState({status:"",priority:"",keyword:""});
+  const [page,setPage]=useState(1);
+
+  const fetchTodos=useCallback(async()=>{
+    setState(s=>({...s,loading:true,error:null}));
+    try{
+      const params=new URLSearchParams({page,page_size:20});
+      if(filter.status)params.set("status",filter.status);
+      if(filter.priority)params.set("priority",filter.priority);
+      if(filter.keyword)params.set("keyword",filter.keyword);
+      const res=await fetch(`${API}?${params}`);
+      const json=await res.json();
+      if(json.code===0)setState({items:json.data.items,loading:false,error:null,pagination:json.data.pagination});
+      else setState(s=>({...s,loading:false,error:json.message}));
+    }catch(e){setState(s=>({...s,loading:false,error:"网络错误，请确认后端已启动"}));}
+  },[page,filter]);
+
+  useEffect(()=>{fetchTodos()},[fetchTodos]);
+
+  const create=async(data)=>{
+    const res=await fetch(API,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(data)});
+    const json=await res.json();
+    if(json.code===0)fetchTodos();
+    return json;
+  };
+
+  const toggleStatus=async(id,currentStatus)=>{
+    const newStatus=currentStatus==="pending"?"completed":"pending";
+    await fetch(`${API}/${id}/status`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({status:newStatus})});
+    fetchTodos();
+  };
+
+  const remove=async(id)=>{await fetch(`${API}/${id}`,{method:"DELETE"});fetchTodos()};
+  const update=async(id,data)=>{
+    await fetch(`${API}/${id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify(data)});
+    fetchTodos();
+  };
+
+  return {state,filter,setFilter,page,setPage,create,toggleStatus,remove,update,fetchTodos};
+}
+
+function TodoCreateForm({onCreate}){
+  const [title,setTitle]=useState("");
+  const [priority,setPriority]=useState("medium");
+  const [showExtra,setShowExtra]=useState(false);
+  const [desc,setDesc]=useState("");
+  const [dueAt,setDueAt]=useState("");
+
+  const handleSubmit=async(e)=>{
+    e.preventDefault();
+    if(!title.trim())return;
+    const data={title:title.trim(),priority};
+    if(desc.trim())data.description=desc.trim();
+    if(dueAt)data.due_at=new Date(dueAt).toISOString();
+    await onCreate(data);
+    setTitle("");setDesc("");setDueAt("");setPriority("medium");setShowExtra(false);
+  };
+
+  return(
+    <form onSubmit={handleSubmit} className="card">
+      <div className="form-row">
+        <input type="text" placeholder="添加新任务..." value={title} onChange={e=>setTitle(e.target.value)} autoFocus/>
+        <select value={priority} onChange={e=>setPriority(e.target.value)}>
+          <option value="low">🟢 低</option>
+          <option value="medium">🟡 中</option>
+          <option value="high">🔴 高</option>
+        </select>
+        <button type="submit" className="btn-primary">添加</button>
+        <button type="button" className="btn-ghost btn-sm" onClick={()=>setShowExtra(!showExtra)}>
+          {showExtra?"收起":"更多"}
+        </button>
+      </div>
+      {showExtra&&(
+        <div style={{marginTop:8,display:"flex",gap:8,flexWrap:"wrap"}}>
+          <input type="text" placeholder="描述（可选）" value={desc} onChange={e=>setDesc(e.target.value)} style={{flex:1}}/>
+          <input type="datetime-local" value={dueAt} onChange={e=>setDueAt(e.target.value)}/>
+        </div>
+      )}
+    </form>
+  );
+}
+
+function TodoItem({todo,onToggle,onDelete,onUpdate}){
+  const [editing,setEditing]=useState(false);
+  const [editTitle,setEditTitle]=useState(todo.title);
+  const [editPriority,setEditPriority]=useState(todo.priority||"medium");
+
+  const handleSave=()=>{
+    if(!editTitle.trim())return;
+    onUpdate(todo.id,{title:editTitle.trim(),priority:editPriority});
+    setEditing(false);
+  };
+
+  if(editing){
+    return(
+      <div className="todo-item">
+        <input type="text" value={editTitle} onChange={e=>setEditTitle(e.target.value)} style={{flex:1}} autoFocus/>
+        <select value={editPriority} onChange={e=>setEditPriority(e.target.value)}>
+          <option value="low">低</option><option value="medium">中</option><option value="high">高</option>
+        </select>
+        <button className="btn-primary btn-sm" onClick={handleSave}>保存</button>
+        <button className="btn-ghost btn-sm" onClick={()=>{setEditTitle(todo.title);setEditing(false)}}>取消</button>
+      </div>
+    );
+  }
+
+  const done=todo.status==="completed";
+  return(
+    <div className="todo-item">
+      <input type="checkbox" className="todo-check" checked={done} onChange={()=>onToggle(todo.id,todo.status)}/>
+      <div className="todo-content">
+        <div className={`todo-title ${done?"done":""}`}>{todo.title}</div>
+        <div className="todo-meta">
+          <span><span className={`priority-dot priority-${todo.priority||"medium"}`}></span>{todo.priority||"中"}</span>
+          <span className={`badge badge-${todo.status}`}>{done?"已完成":"未完成"}</span>
+          {todo.due_at&&<span>📅 {new Date(todo.due_at).toLocaleDateString("zh-CN")}</span>}
+          <span>{new Date(todo.created_at).toLocaleDateString("zh-CN")}</span>
+        </div>
+      </div>
+      <div className="todo-actions">
+        <button className="btn-ghost btn-sm" onClick={()=>{setEditTitle(todo.title);setEditPriority(todo.priority||"medium");setEditing(true)}}>编辑</button>
+        <button className="btn-danger btn-sm" onClick={()=>{if(confirm("确定删除？"))onDelete(todo.id)}}>删除</button>
+      </div>
+    </div>
+  );
+}
+
+function App(){
+  const {state,filter,setFilter,page,setPage,create,toggleStatus,remove,update}=useTodos();
+  const {items,loading,error,pagination}=state;
+
+  return(
+    <div>
+      <h1>📋 Todo-list</h1>
+      <TodoCreateForm onCreate={create}/>
+
+      <div className="card">
+        <div className="filter-bar">
+          <select value={filter.status} onChange={e=>{setFilter(f=>({...f,status:e.target.value}));setPage(1)}}>
+            <option value="">全部状态</option>
+            <option value="pending">未完成</option>
+            <option value="completed">已完成</option>
+          </select>
+          <select value={filter.priority} onChange={e=>{setFilter(f=>({...f,priority:e.target.value}));setPage(1)}}>
+            <option value="">全部优先级</option>
+            <option value="low">低</option>
+            <option value="medium">中</option>
+            <option value="high">高</option>
+          </select>
+          <input type="text" placeholder="搜索关键词..." value={filter.keyword} onChange={e=>{setFilter(f=>({...f,keyword:e.target.value}));setPage(1)}} style={{flex:1}}/>
+        </div>
+
+        {error&&<div className="error">⚠ {error}</div>}
+        {loading&&<div className="loading">加载中...</div>}
+        {!loading&&!error&&items.length===0&&<div className="empty">还没有任务，快来添加吧 🎉</div>}
+
+        {items.map(todo=><TodoItem key={todo.id} todo={todo} onToggle={toggleStatus} onDelete={remove} onUpdate={update}/>)}
+
+        {pagination.total>pagination.page_size&&(
+          <div className="pagination">
+            <button className="btn-ghost btn-sm" disabled={page<=1} onClick={()=>setPage(p=>p-1)}>上一页</button>
+            <span style={{padding:"8px"}}>{page} / {Math.ceil(pagination.total/pagination.page_size)}</span>
+            <button className="btn-ghost btn-sm" disabled={page>=Math.ceil(pagination.total/pagination.page_size)} onClick={()=>setPage(p=>p+1)}>下一页</button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
