@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Todo-list</title>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        :root {
+            --primary: #4f6ef7;
+            --primary-hover: #3b5de7;
+            --danger: #ef4444;
+            --danger-hover: #dc2626;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --border: #e2e8f0;
+            --text: #1e293b;
+            --text-light: #64748b;
+            --radius: 10px;
+            --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 24px 16px;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 28px;
+        }
+        .header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--text);
+            letter-spacing: -0.5px;
+        }
+        .header p {
+            color: var(--text-light);
+            font-size: 14px;
+            margin-top: 4px;
+        }
+
+        /* Create Form */
+        .create-card {
+            background: var(--card);
+            border-radius: var(--radius);
+            padding: 20px;
+            box-shadow: var(--shadow);
+            margin-bottom: 20px;
+        }
+        .create-form { display: flex; flex-direction: column; gap: 12px; }
+        .form-row { display: flex; gap: 10px; flex-wrap: wrap; }
+        .form-group { flex: 1; min-width: 140px; display: flex; flex-direction: column; gap: 4px; }
+        .form-group label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-light);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .form-group input, .form-group textarea, .form-group select {
+            padding: 9px 12px;
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+            outline: none;
+            font-family: inherit;
+            background: #fff;
+        }
+        .form-group input:focus, .form-group textarea:focus, .form-group select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(79,110,247,0.12);
+        }
+        .form-group textarea { resize: vertical; min-height: 56px; }
+        .btn {
+            padding: 9px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+        .btn-primary:hover { background: var(--primary-hover); transform: translateY(-1px); }
+        .btn-sm { padding: 6px 12px; font-size: 13px; }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-danger:hover { background: var(--danger-hover); }
+        .btn-ghost {
+            background: transparent;
+            color: var(--text-light);
+            border: 1px solid var(--border);
+        }
+        .btn-ghost:hover { background: #f1f5f9; color: var(--text); }
+
+        /* Filter Bar */
+        .filter-bar {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+            align-items: center;
+        }
+        .filter-bar input, .filter-bar select {
+            padding: 7px 11px;
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            font-size: 13px;
+            outline: none;
+            background: white;
+            transition: border-color 0.2s;
+        }
+        .filter-bar input:focus, .filter-bar select:focus { border-color: var(--primary); }
+        .filter-bar input[type="text"] { width: 160px; }
+        .filter-hint {
+            font-size: 12px;
+            color: var(--text-light);
+            margin-left: auto;
+        }
+
+        /* Todo List */
+        .todo-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .todo-item {
+            background: var(--card);
+            border-radius: var(--radius);
+            padding: 16px 18px;
+            box-shadow: var(--shadow);
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+            transition: transform 0.15s, box-shadow 0.15s;
+            animation: slideIn 0.25s ease-out;
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .todo-item:hover { box-shadow: var(--shadow-md); }
+
+        /* Checkbox */
+        .checkbox-wrapper {
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+        .checkbox-wrapper input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            accent-color: var(--primary);
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        /* Todo Content */
+        .todo-content { flex: 1; min-width: 0; }
+        .todo-title {
+            font-size: 15px;
+            font-weight: 600;
+            line-height: 1.4;
+            word-break: break-word;
+        }
+        .todo-item.completed .todo-title {
+            text-decoration: line-through;
+            color: var(--text-light);
+        }
+        .todo-desc {
+            font-size: 13px;
+            color: var(--text-light);
+            margin-top: 4px;
+            line-height: 1.5;
+        }
+        .todo-meta {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 8px;
+            align-items: center;
+        }
+
+        /* Badges */
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        .badge-pending { background: #dbeafe; color: #2563eb; }
+        .badge-completed { background: #dcfce7; color: #16a34a; }
+        .badge-high { background: #fef2f2; color: #dc2626; }
+        .badge-medium { background: #fffbeb; color: #d97706; }
+        .badge-low { background: #f0fdf4; color: #16a34a; }
+        .due-badge {
+            font-size: 12px;
+            color: var(--text-light);
+        }
+        .due-overdue { color: var(--danger); font-weight: 600; }
+
+        /* Actions */
+        .todo-actions {
+            display: flex;
+            gap: 6px;
+            flex-shrink: 0;
+            opacity: 0;
+            transition: opacity 0.15s;
+        }
+        .todo-item:hover .todo-actions { opacity: 1; }
+
+        /* Inline Edit */
+        .inline-edit {
+            width: 100%;
+        }
+        .inline-edit input, .inline-edit textarea, .inline-edit select {
+            width: 100%;
+            padding: 6px 10px;
+            border: 1.5px solid var(--primary);
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: inherit;
+            margin-bottom: 6px;
+            outline: none;
+        }
+        .inline-edit textarea { min-height: 48px; resize: vertical; }
+        .edit-actions { display: flex; gap: 6px; justify-content: flex-end; }
+
+        /* Pagination */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            margin-top: 20px;
+            padding: 16px 0;
+        }
+        .pagination button {
+            padding: 7px 14px;
+            border: 1.5px solid var(--border);
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.15s;
+        }
+        .pagination button:hover:not(:disabled) { border-color: var(--primary); color: var(--primary); }
+        .pagination button:disabled { opacity: 0.4; cursor: not-allowed; }
+        .pagination .page-info { font-size: 13px; color: var(--text-light); }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 48px 20px;
+            color: var(--text-light);
+        }
+        .empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+        .empty-state h3 { font-size: 17px; color: var(--text); margin-bottom: 4px; }
+
+        /* Loading */
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-light);
+        }
+        .spinner {
+            display: inline-block;
+            width: 28px;
+            height: 28px;
+            border: 3px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Toast */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .toast {
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            color: white;
+            box-shadow: var(--shadow-md);
+            animation: toastIn 0.3s ease-out;
+            max-width: 360px;
+        }
+        .toast-success { background: var(--success); }
+        .toast-error { background: var(--danger); }
+        @keyframes toastIn {
+            from { opacity: 0; transform: translateX(40px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        /* Confirm Modal */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            backdrop-filter: blur(2px);
+        }
+        .modal-card {
+            background: white;
+            border-radius: 14px;
+            padding: 28px;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+            animation: modalIn 0.2s ease-out;
+        }
+        @keyframes modalIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .modal-card h3 { font-size: 17px; margin-bottom: 8px; }
+        .modal-card p { font-size: 14px; color: var(--text-light); margin-bottom: 20px; }
+        .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+
+        /* Stats Bar */
+        .stats-bar {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 16px;
+            font-size: 13px;
+            color: var(--text-light);
+        }
+        .stat-item strong { color: var(--text); }
+
+        /* Responsive */
+        @media (max-width: 520px) {
+            .container { padding: 16px 12px; }
+            .form-row { flex-direction: column; }
+            .form-group { min-width: unset; }
+            .filter-bar { flex-direction: column; align-items: stretch; }
+            .filter-hint { margin-left: 0; }
+            .todo-item { padding: 12px 14px; }
+            .todo-actions { opacity: 1; }
+            .header h1 { font-size: 24px; }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useCallback, useRef } = React;
+
+        // ==================== API 工具函数 ====================
+
+        const API_BASE = "/api/v1/todos";
+
+        async function api(path, options = {}) {
+            try {
+                const res = await fetch(`${API_BASE}${path}`, {
+                    headers: { "Content-Type": "application/json" },
+                    ...options,
+                });
+                return await res.json();
+            } catch (err) {
+                return { code: 500001, message: "Network error", data: null };
+            }
+        }
+
+        // ==================== Toast 组件 ====================
+
+        function ToastContainer({ toasts }) {
+            return (
+                <div className="toast-container">
+                    {toasts.map(t => (
+                        <div key={t.id} className={`toast toast-${t.type}`}>{t.message}</div>
+                    ))}
+                </div>
+            );
+        }
+
+        // ==================== Confirm Modal ====================
+
+        function ConfirmModal({ title, message, onConfirm, onCancel }) {
+            return (
+                <div className="modal-overlay" onClick={onCancel}>
+                    <div className="modal-card" onClick={e => e.stopPropagation()}>
+                        <h3>{title || "确认操作"}</h3>
+                        <p>{message || "确定要执行此操作吗？"}</p>
+                        <div className="modal-actions">
+                            <button className="btn btn-sm btn-ghost" onClick={onCancel}>取消</button>
+                            <button className="btn btn-sm btn-danger" onClick={onConfirm}>确认删除</button>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // ==================== 创建表单 ====================
+
+        function CreateForm({ onCreated }) {
+            const [form, setForm] = useState({ title: "", description: "", priority: "", due_at: "" });
+            const [expanded, setExpanded] = useState(false);
+
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                if (!form.title.trim()) return;
+
+                const payload = { title: form.title.trim() };
+                if (form.description.trim()) payload.description = form.description.trim();
+                if (form.priority) payload.priority = form.priority;
+                if (form.due_at) payload.due_at = form.due_at;
+
+                const res = await api("", { method: "POST", body: JSON.stringify(payload) });
+                if (res.code === 0) {
+                    setForm({ title: "", description: "", priority: "", due_at: "" });
+                    setExpanded(false);
+                    onCreated(res.data);
+                } else {
+                    onCreated(null, res.message || "创建失败");
+                }
+            };
+
+            return (
+                <div className="create-card">
+                    <form className="create-form" onSubmit={handleSubmit}>
+                        <div className="form-row">
+                            <div className="form-group" style={{ flex: 2 }}>
+                                <label>任务标题 *</label>
+                                <input
+                                    type="text"
+                                    placeholder="输入新任务..."
+                                    value={form.title}
+                                    onChange={e => setForm({ ...form, title: e.target.value })}
+                                    autoFocus
+                                />
+                            </div>
+                            <div style={{ display: "flex", alignItems: "flex-end", gap: 8, paddingBottom: 2 }}>
+                                <button
+                                    type="button"
+                                    className="btn btn-sm btn-ghost"
+                                    onClick={() => setExpanded(!expanded)}
+                                >
+                                    {expanded ? "收起" : "更多选项"}
+                                </button>
+                                <button type="submit" className="btn btn-sm btn-primary" disabled={!form.title.trim()}>
+                                    添加
+                                </button>
+                            </div>
+                        </div>
+                        {expanded && (
+                            <>
+                                <div className="form-group">
+                                    <label>描述</label>
+                                    <textarea
+                                        placeholder="添加详细描述（可选）..."
+                                        value={form.description}
+                                        onChange={e => setForm({ ...form, description: e.target.value })}
+                                        rows={2}
+                                    />
+                                </div>
+                                <div className="form-row">
+                                    <div className="form-group">
+                                        <label>优先级</label>
+                                        <select
+                                            value={form.priority}
+                                            onChange={e => setForm({ ...form, priority: e.target.value })}
+                                        >
+                                            <option value="">无</option>
+                                            <option value="low">低</option>
+                                            <option value="medium">中</option>
+                                            <option value="high">高</option>
+                                        </select>
+                                    </div>
+                                    <div className="form-group">
+                                        <label>截止时间</label>
+                                        <input
+                                            type="datetime-local"
+                                            value={form.due_at}
+                                            onChange={e => setForm({ ...form, due_at: e.target.value })}
+                                        />
+                                    </div>
+                                </div>
+                            </>
+                        )}
+                    </form>
+                </div>
+            );
+        }
+
+        // ==================== 筛选栏 ====================
+
+        function FilterBar({ filters, onFilterChange, total }) {
+            return (
+                <div className="filter-bar">
+                    <select
+                        value={filters.status}
+                        onChange={e => onFilterChange("status", e.target.value)}
+                    >
+                        <option value="">全部状态</option>
+                        <option value="pending">未完成</option>
+                        <option value="completed">已完成</option>
+                    </select>
+                    <select
+                        value={filters.priority}
+                        onChange={e => onFilterChange("priority", e.target.value)}
+                    >
+                        <option value="">全部优先级</option>
+                        <option value="high">高</option>
+                        <option value="medium">中</option>
+                        <option value="low">低</option>
+                    </select>
+                    <input
+                        type="text"
+                        placeholder="搜索关键词..."
+                        value={filters.keyword}
+                        onChange={e => onFilterChange("keyword", e.target.value)}
+                    />
+                    <span className="filter-hint">共 {total} 条</span>
+                </div>
+            );
+        }
+
+        // ==================== 单个 Todo 项 ====================
+
+        function TodoItem({ todo, onToggle, onDelete, onUpdated }) {
+            const [editing, setEditing] = useState(false);
+            const [editForm, setEditForm] = useState({
+                title: todo.title,
+                description: todo.description || "",
+                priority: todo.priority || "",
+                due_at: todo.due_at ? todo.due_at.slice(0, 16) : "",
+            });
+
+            const handleSave = async () => {
+                const payload = {};
+                if (editForm.title !== todo.title) payload.title = editForm.title.trim();
+                if (editForm.description !== (todo.description || "")) payload.description = editForm.description.trim() || null;
+                if (editForm.priority !== (todo.priority || "")) payload.priority = editForm.priority || null;
+                if (editForm.due_at) {
+                    const iso = new Date(editForm.due_at).toISOString();
+                    if (iso !== todo.due_at) payload.due_at = iso;
+                } else if (todo.due_at) {
+                    payload.due_at = null;
+                }
+
+                if (!payload.title && Object.keys(payload).length === 0) {
+                    setEditing(false);
+                    return;
+                }
+
+                const res = await api(`/${todo.id}`, {
+                    method: "PATCH",
+                    body: JSON.stringify(payload),
+                });
+                if (res.code === 0) {
+                    setEditing(false);
+                    onUpdated(res.data);
+                } else {
+                    alert(res.message || "更新失败");
+                }
+            };
+
+            const isOverdue = todo.due_at && todo.status === "pending" && new Date(todo.due_at) < new Date();
+
+            return (
+                <div className={`todo-item ${todo.status === "completed" ? "completed" : ""}`}>
+                    <div className="checkbox-wrapper">
+                        <input
+                            type="checkbox"
+                            checked={todo.status === "completed"}
+                            onChange={() => onToggle(todo)}
+                        />
+                    </div>
+                    <div className="todo-content">
+                        {editing ? (
+                            <div className="inline-edit">
+                                <input
+                                    type="text"
+                                    value={editForm.title}
+                                    onChange={e => setEditForm({ ...editForm, title: e.target.value })}
+                                    placeholder="标题"
+                                />
+                                <textarea
+                                    value={editForm.description}
+                                    onChange={e => setEditForm({ ...editForm, description: e.target.value })}
+                                    placeholder="描述"
+                                    rows={2}
+                                />
+                                <div style={{ display: "flex", gap: 10 }}>
+                                    <select
+                                        value={editForm.priority}
+                                        onChange={e => setEditForm({ ...editForm, priority: e.target.value })}
+                                    >
+                                        <option value="">无优先级</option>
+                                        <option value="low">低</option>
+                                        <option value="medium">中</option>
+                                        <option value="high">高</option>
+                                    </select>
+                                    <input
+                                        type="datetime-local"
+                                        value={editForm.due_at}
+                                        onChange={e => setEditForm({ ...editForm, due_at: e.target.value })}
+                                    />
+                                </div>
+                                <div className="edit-actions">
+                                    <button className="btn btn-sm btn-primary" onClick={handleSave}>保存</button>
+                                    <button className="btn btn-sm btn-ghost" onClick={() => setEditing(false)}>取消</button>
+                                </div>
+                            </div>
+                        ) : (
+                            <>
+                                <div className="todo-title">{todo.title}</div>
+                                {todo.description && <div className="todo-desc">{todo.description}</div>}
+                                <div className="todo-meta">
+                                    <span className={`badge badge-${todo.status}`}>
+                                        {todo.status === "pending" ? "未完成" : "已完成"}
+                                    </span>
+                                    {todo.priority && (
+                                        <span className={`badge badge-${todo.priority}`}>
+                                            {{ high: "高", medium: "中", low: "低" }[todo.priority]}
+                                        </span>
+                                    )}
+                                    {todo.due_at && (
+                                        <span className={`due-badge ${isOverdue ? "due-overdue" : ""}`}>
+                                            截止: {new Date(todo.due_at).toLocaleString("zh-CN")}
+                                        </span>
+                                    )}
+                                    <span className="due-badge">
+                                        更新: {new Date(todo.updated_at).toLocaleString("zh-CN")}
+                                    </span>
+                                </div>
+                            </>
+                        )}
+                    </div>
+                    {!editing && (
+                        <div className="todo-actions">
+                            <button className="btn btn-sm btn-ghost" onClick={() => setEditing(true)}>
+                                编辑
+                            </button>
+                            <button className="btn btn-sm btn-danger" onClick={() => onDelete(todo)}>
+                                删除
+                            </button>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        // ==================== 分页组件 ====================
+
+        function Pagination({ page, page_size, total, onPageChange }) {
+            const totalPages = Math.ceil(total / page_size) || 1;
+            return (
+                <div className="pagination">
+                    <button disabled={page <= 1} onClick={() => onPageChange(page - 1)}>上一页</button>
+                    <span className="page-info">{page} / {totalPages}（共 {total} 条）</span>
+                    <button disabled={page >= totalPages} onClick={() => onPageChange(page + 1)}>下一页</button>
+                </div>
+            );
+        }
+
+        // ==================== 主应用 ====================
+
+        function App() {
+            const [todos, setTodos] = useState([]);
+            const [loading, setLoading] = useState(true);
+            const [total, setTotal] = useState(0);
+            const [page, setPage] = useState(1);
+            const pageSize = 12;
+            const [filters, setFilters] = useState({ status: "", priority: "", keyword: "" });
+            const [toasts, setToasts] = useState([]);
+            const [deleteTarget, setDeleteTarget] = useState(null);
+            const toastIdRef = useRef(0);
+
+            const showToast = useCallback((message, type = "success") => {
+                const id = ++toastIdRef.current;
+                setToasts(prev => [...prev, { id, message, type }]);
+                setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 3000);
+            }, []);
+
+            const fetchTodos = useCallback(async () => {
+                setLoading(true);
+                const params = new URLSearchParams({
+                    page: String(page),
+                    page_size: String(pageSize),
+                    sort_by: "created_at",
+                    order: "desc",
+                });
+                if (filters.status) params.set("status", filters.status);
+                if (filters.priority) params.set("priority", filters.priority);
+                if (filters.keyword) params.set("keyword", filters.keyword);
+
+                const res = await api(`?${params.toString()}`);
+                if (res.code === 0) {
+                    setTodos(res.data.items);
+                    setTotal(res.data.pagination.total);
+                }
+                setLoading(false);
+            }, [page, filters]);
+
+            useEffect(() => { fetchTodos(); }, [fetchTodos]);
+
+            const handleFilterChange = (key, value) => {
+                setFilters(prev => ({ ...prev, [key]: value }));
+                setPage(1);
+            };
+
+            const handleToggleStatus = async (todo) => {
+                const newStatus = todo.status === "pending" ? "completed" : "pending";
+                // 乐观更新
+                setTodos(prev => prev.map(t =>
+                    t.id === todo.id ? { ...t, status: newStatus, completed_at: newStatus === "completed" ? new Date().toISOString() : null } : t
+                ));
+                const res = await api(`/${todo.id}/status`, {
+                    method: "PATCH",
+                    body: JSON.stringify({ status: newStatus }),
+                });
+                if (res.code === 0) {
+                    showToast(newStatus === "completed" ? "已完成 ✓" : "已恢复为未完成");
+                } else {
+                    // 回滚
+                    setTodos(prev => prev.map(t =>
+                        t.id === todo.id ? { ...t, status: todo.status, completed_at: todo.completed_at } : t
+                    ));
+                    showToast(res.message || "状态更新失败", "error");
+                }
+            };
+
+            const handleDelete = async (todo) => {
+                const res = await api(`/${todo.id}`, { method: "DELETE" });
+                if (res.code === 0) {
+                    setTodos(prev => prev.filter(t => t.id !== todo.id));
+                    setTotal(prev => prev - 1);
+                    showToast("已删除");
+                } else {
+                    showToast(res.message || "删除失败", "error");
+                }
+                setDeleteTarget(null);
+            };
+
+            const handleCreated = (data, errMsg) => {
+                if (data) {
+                    showToast("创建成功！");
+                    fetchTodos(); // 刷新列表以获取服务端数据
+                } else if (errMsg) {
+                    showToast(errMsg, "error");
+                }
+            };
+
+            const handleUpdated = (updatedTodo) => {
+                setTodos(prev => prev.map(t => t.id === updatedTodo.id ? updatedTodo : t));
+                showToast("更新成功！");
+            };
+
+            const pendingCount = todos.filter(t => t.status === "pending").length;
+            const completedCount = todos.filter(t => t.status === "completed").length;
+
+            return (
+                <>
+                    <ToastContainer toasts={toasts} />
+                    {deleteTarget && (
+                        <ConfirmModal
+                            title="确认删除"
+                            message={`确定要删除「${deleteTarget.title}」吗？此操作可以恢复。`}
+                            onConfirm={() => handleDelete(deleteTarget)}
+                            onCancel={() => setDeleteTarget(null)}
+                        />
+                    )}
+                    <div className="container">
+                        <div className="header">
+                            <h1>✅ Todo-list</h1>
+                            <p>管理你的待办事项，保持高效专注</p>
+                        </div>
+
+                        <CreateForm onCreated={handleCreated} />
+
+                        <div className="stats-bar">
+                            <span className="stat-item">未完成: <strong>{pendingCount}</strong></span>
+                            <span className="stat-item">已完成: <strong>{completedCount}</strong></span>
+                        </div>
+
+                        <FilterBar
+                            filters={filters}
+                            onFilterChange={handleFilterChange}
+                            total={total}
+                        />
+
+                        {loading ? (
+                            <div className="loading">
+                                <div className="spinner"></div>
+                                <p style={{ marginTop: 12 }}>加载中...</p>
+                            </div>
+                        ) : todos.length === 0 ? (
+                            <div className="empty-state">
+                                <div className="icon">📝</div>
+                                <h3>暂无待办事项</h3>
+                                <p>{filters.status || filters.keyword ? "试试调整筛选条件" : "在上方创建你的第一个任务吧！"}</p>
+                            </div>
+                        ) : (
+                            <>
+                                <div className="todo-list">
+                                    {todos.map(todo => (
+                                        <TodoItem
+                                            key={todo.id}
+                                            todo={todo}
+                                            onToggle={handleToggleStatus}
+                                            onDelete={setDeleteTarget}
+                                            onUpdated={handleUpdated}
+                                        />
+                                    ))}
+                                </div>
+                                <Pagination
+                                    page={page}
+                                    page_size={pageSize}
+                                    total={total}
+                                    onPageChange={setPage}
+                                />
+                            </>
+                        )}
+                    </div>
+                </>
+            );
+        }
+
+        // 渲染
+        const root = ReactDOM.createRoot(document.getElementById("root"));
+        root.render(<App />);
+    </script>
+</body>
+</html>
