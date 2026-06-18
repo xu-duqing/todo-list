@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Todo List</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="container">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">Todo-list</p>
+          <h1>任务管理台</h1>
+          <p class="subtitle">支持创建、编辑、完成、删除、筛选与排序，数据持久化保存在本地。</p>
+        </div>
+      </header>
+
+      <section class="card">
+        <h2>创建任务</h2>
+        <form id="create-form" class="grid-form">
+          <label>
+            标题
+            <input name="title" placeholder="例如：完成周报" required />
+          </label>
+          <label>
+            优先级
+            <select name="priority">
+              <option value="low">低</option>
+              <option value="medium" selected>中</option>
+              <option value="high">高</option>
+            </select>
+          </label>
+          <label class="full">
+            描述
+            <textarea name="description" rows="3" placeholder="补充任务描述"></textarea>
+          </label>
+          <label>
+            截止时间
+            <input name="due_at" type="datetime-local" />
+          </label>
+          <div class="form-actions">
+            <button type="submit">新增任务</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="card">
+        <div class="toolbar">
+          <h2>任务列表</h2>
+          <div id="summary" class="summary"></div>
+        </div>
+        <div class="filters">
+          <select id="filter-status">
+            <option value="">全部状态</option>
+            <option value="pending">未完成</option>
+            <option value="completed">已完成</option>
+          </select>
+          <select id="filter-priority">
+            <option value="">全部优先级</option>
+            <option value="low">低</option>
+            <option value="medium">中</option>
+            <option value="high">高</option>
+          </select>
+          <input id="filter-keyword" placeholder="搜索标题或描述" />
+          <select id="sort-by">
+            <option value="created_at">按创建时间</option>
+            <option value="updated_at">按更新时间</option>
+            <option value="due_at">按截止时间</option>
+          </select>
+          <select id="sort-order">
+            <option value="desc">倒序</option>
+            <option value="asc">正序</option>
+          </select>
+        </div>
+        <div id="message" class="message"></div>
+        <div id="todo-list" class="todo-list"></div>
+      </section>
+    </div>
+
+    <template id="todo-item-template">
+      <article class="todo-item">
+        <div class="todo-main">
+          <div class="todo-title-row">
+            <label class="checkbox-row">
+              <input type="checkbox" class="toggle-status" />
+              <span class="todo-title"></span>
+            </label>
+            <span class="badge priority"></span>
+          </div>
+          <p class="todo-description"></p>
+          <div class="meta"></div>
+        </div>
+        <div class="todo-actions">
+          <button class="edit-btn secondary">编辑</button>
+          <button class="delete-btn danger">删除</button>
+        </div>
+      </article>
+    </template>
+
+    <dialog id="edit-dialog">
+      <form id="edit-form" class="grid-form dialog-form" method="dialog">
+        <h3>编辑任务</h3>
+        <input type="hidden" name="id" />
+        <label>
+          标题
+          <input name="title" required />
+        </label>
+        <label>
+          优先级
+          <select name="priority">
+            <option value="low">低</option>
+            <option value="medium">中</option>
+            <option value="high">高</option>
+          </select>
+        </label>
+        <label class="full">
+          描述
+          <textarea name="description" rows="4"></textarea>
+        </label>
+        <label>
+          截止时间
+          <input name="due_at" type="datetime-local" />
+        </label>
+        <div class="dialog-actions">
+          <button value="cancel" class="secondary" type="button" id="cancel-edit">取消</button>
+          <button value="default" type="submit">保存</button>
+        </div>
+      </form>
+    </dialog>
+
+    <script src="/app.js" type="module"></script>
+  </body>
+</html>

@@ -1,5 +1,55 @@
 # Todo-list 技术设计文档
 
+## 0. 项目实现与运行说明
+
+当前仓库已包含一个可运行的最小可用版本实现，采用 Node.js 原生 HTTP 服务 + 本地 JSON 持久化，覆盖以下能力：
+
+- 创建待办事项
+- 查看列表
+- 编辑任务
+- 标记完成 / 取消完成
+- 删除任务（软删除）
+- 按状态、优先级、关键词筛选
+- 按创建时间、更新时间、截止时间排序
+
+### 快速开始
+
+确保本机已安装 Node.js 18+，然后在仓库根目录运行：
+
+```bash
+npm install
+npm start
+```
+
+启动后访问：
+
+```text
+http://localhost:3000
+```
+
+### 数据存储
+
+应用数据默认保存在：
+
+```text
+data/todos.json
+```
+
+重启服务后数据仍会保留。
+
+### API 概览
+
+服务实现了以下接口：
+
+- `POST /api/v1/todos`
+- `GET /api/v1/todos`
+- `GET /api/v1/todos/{id}`
+- `PATCH /api/v1/todos/{id}`
+- `PATCH /api/v1/todos/{id}/status`
+- `DELETE /api/v1/todos/{id}`
+
+---
+
 ## 1. 背景
 
 Todo-list 是一个任务管理功能，用户可以创建、查看、编辑、完成和删除待办事项。该功能适用于个人任务管理、轻量项目跟踪、提醒事项记录等场景。
